@@ -1,0 +1,612 @@
+﻿maxModes 			= 7 --Number of modes, mode selection and batt not included
+maxTimezones		= 3 --Available timezones
+var_arrayFix 		= 1 --Arrays start at 1
+var_mode 			= 0
+var_colour			= 999999
+var_high			= 'e11e11'
+var_low				= '0d79f3'
+var_current			= '77c100'
+var_day				= '54d4f0'
+var_sideButton		= '68dc91'
+var_lastMode		= -1
+var_eventText 		= 'No Events'
+var_eventTime 		= ''
+var_eventLocation 	= ''
+var_timePos			= 0 
+dualTimepos			= 1
+var_ms_locMT		= 0
+var_ms_locDT		= 0
+var_eventPos		= -1
+var_SW				= 1 --Stopwatch
+var_W				= 2 --Weather
+var_Fit				= 3 --Fitness
+var_E				= 4 --Events
+var_DT				= 5 --DualTime
+var_Cal				= 6 --Calculator
+var_Set				= 7 --Settings
+--Start not included modes--
+var_MS				= 8 --Mode Selection
+var_Batt			= 9 --Battery
+var_MT				= 10 --Mode Time
+--End not included modes--
+
+--opacity				= {'opacityH','opacitySW','opacityW','opacityF','opacityE','opacityDT','opacityMS'}--Home,Stopwatch,Weather,Fitness,Events,DualTime,ModeSelect
+var_ms_opacity		= {100,-1,-1,-1,-1,-1,-1,-1,-1,100,-1}--Home,Stopwatch,Weather,Fitness,Events,DualTime,Calculator,Settings,ModeSelect,Battery,ModeTime
+--posX				= {'posXH','posXSW','posXW','posXF','posXE','posXDT','posXMS'}
+var_moveposX			= 600
+
+var_ms_posX				= {0,0,0,0,0,0,0,0,0,0,0,0}
+
+
+--var_modeTimeopacity	= -1
+var_NPopacity		= -1 -- next
+var_Popacity		= -1 -- prev
+var_Nopacity		= -1
+tweens.moveX 		= 0
+tweens.opacity		= -1
+tweens.opacitySet	= -1
+var_direction = 0
+
+pageWeather = 1
+
+var_colourNum 		= 999999
+var_colourOp		= 999999
+
+--var_calTxt0 	= "0"	--0
+--var_calTxt1 	= "1"	--1
+--var_calTxt2 	= "2"	--2
+--var_calTxt3		= "3"	--3
+--var_calTxt4 	= "4"	--4
+--var_calTxt5 	= "5"	--5
+--var_calTxt6 	= "6"	--6
+--var_calTxt7 	= "7"	--7
+--var_calTxt8 	= "8"	--8
+--var_calTxt9 	= "9"	--9
+--var_calTxtDec 	= "."	--10
+--var_calTxtDiv 	= "/"	--11 // A
+--var_calTxtSub	= "─"	--12 // B
+--var_calTxtAdd 	= "+"	--13 // C
+--var_calTxtCE 	= "CE"	--14 // D
+--var_calTxtMul 	= "*"	--15 // E
+--var_calTxtEqual = "="	--16 // F
+--var_calTxtDel 	= "←"	--17
+						--18 C
+
+var_calTxt	= {0,1,2,3,4,5,6,7,8,9,'.','/','─','+','CE','*','=','←','C'}--Changes to hex
+calTxtCal 	= {0,1,2,3,4,5,6,7,8,9,'.','/','─','+','CE','*','=','←','C'}
+calTxtHex 	= {0,1,2,3,4,5,6,7,8,9,'','A','B','C','D','E','F','←','C'}
+calTxtCount	= {0,1,2,3,4,5,6,7,8,9,'','','','','','','','←','C'}
+
+var_xPos = {-75,-150,-75,0,-150,-75,0,-150,-75,0,0,85,85,85,160,160,160,-150}--temp
+var_xPosCal = {-75,-150,-75,0,-150,-75,0,-150,-75,0,0,85,85,85,160,160,160,-150}
+
+--------------------
+--   First Start  --
+--------------------
+pageSettings = 1
+var_setVal	= {var_colour,var_day,var_high,var_current,var_low,var_sideButton,var_colourNum,var_colourOp}
+setTitle = {'general', 'countdown', 'weather', 'calculator'}--ability to control order
+--set = {}
+--colour = {}
+set['general'] = {'Main','Side Buttons'}--2
+colour['general'] = {var_colour,var_sideButton}
+
+set['countdown'] = {'Minutes','Seconds','Milliseconds'}--3
+
+set['weather'] = {'Day','High','Current','Low'}--4
+colour['weather'] = {var_day,var_high,var_current,var_low}
+
+set['calculator'] = {'Numbers','Operators'}--2
+colour['calculator'] = {var_colourNum,var_colourOp}
+
+--startPage = {}
+--setPage = {}
+--setColour = {}
+pageCounter = 0
+for i,v in ipairs(setTitle) do --Create the pages
+	count = 0
+	pageCounter = pageCounter + 1; setPage[pageCounter] = {}; setColour[pageCounter] = {}
+	startPage[v] = pageCounter
+	for x,y in ipairs(set[v]) do
+		count = count + 1
+		if count > 3 then count = 0; pageCounter = pageCounter + 1; setPage[pageCounter] = {}; setColour[pageCounter] = {} end
+		table.insert(setPage[pageCounter],y)
+		if colour[v] == nil then z = var_colour else z = colour[v][x]end
+		table.insert(setColour[pageCounter],z)
+	end
+
+end
+
+--------------------
+--   Mode Change  --
+--------------------
+function mode(x) --Left/Right arrows
+	if var_lastMode > -1 then 
+		if var_ms_opacity[var_lastMode+var_arrayFix] > -1 then 
+			var_ms_opacity[var_lastMode+var_arrayFix] = -1
+		end 
+
+		if var_ms_opacity[var_lastMode+var_arrayFix] == var_Cal and var_ms_opacity[var_Batt+var_arrayFix] < 100 then 
+			var_ms_opacity[var_Batt+var_arrayFix] = 100
+		end 
+	end
+	if var_mode == maxModes+1 then --Mode selection open
+		var_mode = var_lastMode
+		var_lastMode = maxModes+1
+	else
+		var_lastMode = var_mode
+	end
+	
+	if x == 'L' then
+		var_direction = -1
+		if var_mode == 0 then
+			var_mode = maxModes
+		else
+			var_mode = var_mode - 1
+		end
+	else
+		var_direction = 1
+		if var_mode == maxModes then
+			var_mode = 0
+		else
+			var_mode = var_mode + 1
+		end
+	end
+	if var_mode ~= 0 and var_mode ~= var_MS and var_mode ~= var_Cal then var_ms_opacity[var_MT+var_arrayFix] = 100 end
+	if var_mode == var_W then weather(pageWeather) end
+	if var_mode == var_E then event('update') end
+	if var_mode == var_Cal then calcScreen('calc') end
+	wm_schedule{{action='tween', tween='moveX', from=var_moveposX*var_direction, to=0, duration=1, easing=outCubic}}
+
+	var_ms_opacity[var_lastMode+var_arrayFix] = (tweens.moveX/var_moveposX*101)-1
+	if var_mode ~= var_W then
+		if var_mode == var_SW or var_mode == var_E or var_mode == var_DT then var_Popacity = 100; var_Nopacity = 100 else var_Popacity = -1; var_Nopacity = -1 end
+	end
+end
+
+function modeSelect(x)
+	if var_lastMode > -1 then 
+		if var_ms_opacity[var_lastMode+var_arrayFix] > -1 then 
+			var_ms_opacity[var_lastMode+var_arrayFix] = -1
+		end 
+		
+		if var_ms_opacity[var_lastMode+var_arrayFix] == var_Cal and var_ms_opacity[var_Batt+var_arrayFix] < 100 then 
+			var_ms_opacity[var_Batt+var_arrayFix] = 100
+		end
+	end
+	
+	var_lastMode = var_mode
+	var_mode = x
+	var_ms_posX[var_mode+var_arrayFix] = 0
+	
+	if var_mode == var_W then weather(pageWeather) end
+	if var_mode == var_E then event('update') end
+	if var_mode == var_Cal then calcScreen('calc') end
+	wm_schedule{{action='tween', tween='opacity', from=100, to=-1, duration=1, easing=outCubic}}
+	if var_mode ~= var_W then 
+		if var_mode == var_SW or var_mode == var_E or var_mode == var_DT then var_Popacity = 100; var_Nopacity = 100 else var_Popacity = -1; var_Nopacity = -1 end
+	end
+	
+end
+
+function change(reason)
+	if var_mode == var_SW then stopwatch(reason) end
+	if var_mode == var_W then weather(reason) end
+	if var_mode == var_E then event(reason) end
+	if var_mode == var_DT then changeTimezone(reason) end
+	if var_mode == var_Cal then calcScreen(reason) end
+	if var_mode == var_Set then settings(reason) end
+end
+
+function calcScreen(screen)
+	--if screen == "calc" then
+	--	for i = 0, table.getn(var_xPos) do
+	--		var_xPos[i+var_arrayFix] = var_xPosCal[i+var_arrayFix]
+	--		var_calTxt[i+var_arrayFix] = calTxtCal[i+var_arrayFix]
+	--	end
+	--elseif screen == "set" then
+	--	for i = 0, table.getn(var_xPos) do
+	--		--var_xPos[i+var_arrayFix] = var_xPosCal[i+var_arrayFix]
+	--		var_calTxt[i+var_arrayFix] = calTxtHex[i+var_arrayFix]
+	--	end
+	--
+	--end
+	for i,v in ipairs(var_calTxt) do
+		if screen == "calc" then
+			var_calTxt[i] = calTxtCal[i]
+		elseif screen == "hex" then
+			var_calTxt[i] = calTxtHex[i]
+		elseif screen == "count" then
+			var_calTxt[i] = calTxtHex[i]
+		end
+	end
+	--var_calTxt[0+var_arrayFix] == '' and -1 or var_ms_opacity[var_Cal+var_arrayFix]
+	--var_calTxt = {0,1,2,3,4,5,6,7,8,9,'.','/','─','+','CE','*','=','←','C'}--Changes to hex
+	--calTxtCal = {0,1,2,3,4,5,6,7,8,9,'.','/','─','+','CE','*','=','←','C'}
+	--calTxtHex = {0,1,2,3,4,5,6,7,8,9,'','A','B','C','D','E','F','←','C'}
+	--calTxtCount	= {0,1,2,3,4,5,6,7,8,9,'','','','','','','','←','C'}
+end
+
+function stopwatch(reason)
+	if reason == "prev" then wm_action('sw_start_stop') else wm_action('sw_reset') end
+end
+
+function weather(reason)
+	if reason == 'swap' then wm_action('m_update_weather'); return elseif reason == 'prev' then pageWeather = 1 elseif reason == 'next' then pageWeather = 2 else pageWeather = reason end
+	iconSet = {{wf0dci},{wf1dci},{wf2dci},{wf3dci},{wf4dci},{wf5dci}}
+	highSet = {{wf0dth},{wf1dth},{wf2dth},{wf3dth},{wf4dth},{wf5dth}}
+	currentSet = {{wf0dt},{wf1dt},{wf2dt},{wf3dt},{wf4dt},{wf5dt}}
+	lowSet = {{wf0dtl},{wf1dtl},{wf2dtl},{wf3dtl},{wf4dtl},{wf5dtl}}
+	daySet = {'S\nU\nN','M\nO\nN','T\nU\nE','W\nE\nD','T\nH\nU','F\nR\nI','S\nA\nT'}
+
+	nextSet = 0
+	if pageWeather == 2 then var_Popacity = 100; var_Nopacity = -1; nextSet = 3 else var_Popacity = -1; var_Nopacity = 100 end
+
+	today = {ddw0} + nextSet
+	nextday = today + 1
+	dayafter = today + 2
+	
+	if today > 6 then today = today-7 end
+	if nextday > 6 then nextday = nextday-7 end
+	if dayafter > 6 then dayafter = dayafter-7 end
+
+	today = today + var_arrayFix
+	nextday = nextday + var_arrayFix
+	dayafter = dayafter + var_arrayFix
+	
+	for i = 0, 6 do
+		tmpIcon = iconSet[i+var_arrayFix]
+		iconSet[i+var_arrayFix] = 1 --default 
+		if tmpIcon == '01d' then iconSet[i+var_arrayFix] = 1 end
+		if tmpIcon == '02d' then iconSet[i+var_arrayFix] = 2 end
+		if tmpIcon == '03d' then iconSet[i+var_arrayFix] = 3 end
+		if tmpIcon == '04d' then iconSet[i+var_arrayFix] = 4 end
+		if tmpIcon == '09d' then iconSet[i+var_arrayFix] = 5 end
+		if tmpIcon == '10d' then iconSet[i+var_arrayFix] = 6 end
+		if tmpIcon == '11d' then iconSet[i+var_arrayFix] = 7 end
+		if tmpIcon == '13d' then iconSet[i+var_arrayFix] = 8 end
+		if tmpIcon == '50d' then iconSet[i+var_arrayFix] = 9 end
+	end
+
+	var_aWeather = {daySet[today],iconSet[0+nextSet+var_arrayFix],highSet[0+nextSet+var_arrayFix],currentSet[0+nextSet+var_arrayFix],lowSet[0+nextSet+var_arrayFix]}
+	var_bWeather = {daySet[nextday],iconSet[1+nextSet+var_arrayFix],highSet[1+nextSet+var_arrayFix],currentSet[1+nextSet+var_arrayFix],lowSet[1+nextSet+var_arrayFix]}
+	var_cWeather = {daySet[dayafter],iconSet[2+nextSet+var_arrayFix],highSet[2+nextSet+var_arrayFix],currentSet[2+nextSet+var_arrayFix],lowSet[2+nextSet+var_arrayFix]}
+end
+
+
+--------------------
+--    Timezone    --
+--------------------
+function changeTimezone(reason)
+--reasons [prev,next,swap]
+	if reason == "swap" then -- change local time to dual time spot
+		tmpPos = var_timePos
+		var_timePos = dualTimepos
+		dualTimepos = tmpPos
+	elseif reason == "next" then
+		if dualTimepos == 0 then dualTimepos = var_timePos end
+		var_timePos = 0 --reset local time position
+		if dualTimepos == maxTimezones then --max timezones = 3
+			dualTimepos = 1
+		else
+			dualTimepos = dualTimepos + 1
+		end
+	else
+		if dualTimepos == 0 then dualTimepos = var_timePos end
+		var_timePos = 0
+		if dualTimepos == 1 then
+			dualTimepos = maxTimezones
+		else
+			dualTimepos = dualTimepos - 1
+		end
+	end
+end
+
+--------------------
+--     Events     --
+--------------------
+function event(reason)
+
+	if {cex} then
+		maxEvents = 9
+		for i = 1, 9 do --find max events available
+			if wm_tag("{c"..i.."ex}") == 'false' then maxEvents = i-1; break end	
+		end
+	
+		if reason == 'prev' then
+			if var_eventPos == 1 then
+				var_eventPos = maxEvents
+			else
+				var_eventPos = var_eventPos - 1
+			end
+		elseif reason == 'next' then
+			if var_eventPos == maxEvents then
+				var_eventPos = 1
+			else
+				var_eventPos = var_eventPos + 1
+			end
+		else
+			if var_eventPos == -1 then var_eventPos = 1 end
+		end
+
+		var_eventText = wm_tag("{c"..var_eventPos.."t}")
+		var_eventTime = wm_tag("{c"..var_eventPos.."b}") .. ' - ' .. wm_tag("{c"..var_eventPos.."e}")
+		var_eventLocation = wm_tag("{c"..var_eventPos.."l}")
+	
+	else
+		var_eventText = 'No Events'
+		var_eventTime = ''
+		var_eventLocation = ''
+	end
+end
+
+--------------------
+--  Update Time   --
+--  Animations	  --
+--------------------
+function on_millisecond()
+	timeSet		= {{dh23z} .. ":" ..  {dmz},{tz1t},{tz2t},{tz3t}}
+	var_ms_time = timeSet[var_timePos+var_arrayFix]
+	var_ms_dualtime = timeSet[dualTimepos+var_arrayFix]
+	if tweens.moveX ~= 0 then
+		var_ms_posX[var_lastMode+var_arrayFix] = ((var_moveposX*var_direction)-tweens.moveX)*-1
+		var_ms_posX[var_mode+var_arrayFix] = tweens.moveX -- 600 -> 0
+		if var_mode == 0 or var_mode == var_MS or var_mode == var_Cal then var_ms_opacity[var_MT+var_arrayFix] = math.abs(tweens.moveX/var_moveposX*101)-1 end
+		
+		if var_mode == var_Cal then
+			var_ms_opacity[var_Batt+var_arrayFix] = math.abs(tweens.moveX/var_moveposX*101)-1
+		elseif var_lastMode == var_Cal or var_lastMode == var_MS then
+			var_ms_opacity[var_Batt+var_arrayFix] = 100-math.abs(tweens.moveX/var_moveposX*101)
+		end
+		
+		var_ms_opacity[var_lastMode+var_arrayFix] = math.abs(tweens.moveX/var_moveposX*101)-1
+		var_ms_opacity[var_mode+var_arrayFix] = 100-math.abs(tweens.moveX/var_moveposX*101)
+	else
+		if var_mode ~= var_Cal and var_mode ~= var_MS then
+			if var_ms_opacity[var_Batt+var_arrayFix] < 100 then var_ms_opacity[var_Batt+var_arrayFix] = 100 end
+		end
+		var_ms_posX[var_lastMode+var_arrayFix] = ((var_moveposX*var_direction)-tweens.moveX)*-1
+		var_ms_posX[var_mode+var_arrayFix] = tweens.moveX
+	end
+	
+	if tweens.opacity > -1 then
+		if var_mode == var_Cal then
+			var_ms_opacity[var_MT+var_arrayFix] =-1
+		else
+			if var_mode ~= 0 and var_mode ~= var_MS then
+				var_ms_opacity[var_MT+var_arrayFix] = 101-tweens.opacity 
+			else
+				if var_lastMode == var_Cal or var_mode == 0 then
+					var_ms_opacity[var_MT+var_arrayFix] = -1
+				else
+					var_ms_opacity[var_MT+var_arrayFix] = tweens.opacity
+				end
+			end
+		end
+		if var_mode == var_MS or var_mode == var_Cal then
+			if var_mode == var_Cal or var_lastMode == var_Cal then
+				var_ms_opacity[var_Batt+var_arrayFix] = -1
+			else
+				var_ms_opacity[var_Batt+var_arrayFix] = tweens.opacity
+			end
+		elseif var_lastMode ~= var_Cal and var_mode ~= var_MS then
+			var_ms_opacity[var_Batt+var_arrayFix] = 101-tweens.opacity 
+		end
+		var_ms_opacity[var_lastMode+var_arrayFix] = tweens.opacity
+		var_ms_opacity[var_mode+var_arrayFix] = 101-tweens.opacity
+	end
+	
+	if var_mode == var_Set then
+		if pageSettings > 0 then
+			var_ms_opacity[var_Cal+var_arrayFix] = tweens.opacitySet
+			var_ms_opacity[var_Set+var_arrayFix] = 101-tweens.opacitySet
+		else
+			var_ms_opacity[var_Set+var_arrayFix] = tweens.opacitySet
+			var_ms_opacity[var_Cal+var_arrayFix] = 101-tweens.opacitySet
+		end
+	end
+	
+	if (var_mode == 0 and var_timePos > 0) or var_mode == var_DT then --DualTime
+		locationSet = {'Local Time',{tz1l},{tz2l},{tz3l}}
+		var_location = locationSet[var_timePos+var_arrayFix]
+		var_locationDT = locationSet[dualTimepos+var_arrayFix]
+	end
+end
+
+currentEntry = 0
+currentOp = ''
+var_lastAction = ''
+tmpForm = ''
+
+var_calcForm = ''
+var_calcAns = ''
+var_calcDsp = 0
+lastOp = ''
+noDecimal = true
+
+--------------------
+--   Calculator   --
+--------------------
+function calculate(R,T)
+
+	if var_mode == var_Set then
+	
+	else
+		--var_test = math.sin(math.rad(3.5))
+		--var_test = math.deg(math.asin(var_test))
+		if var_calcDsp == 'Infinity' and R ~= 'c' then return end -- disable everything except 'c'
+		if T == 'decimal' then
+			if noDecimal then
+			if currentEntry == '' then var_calcDsp = 0; currentEntry = 0 end
+				var_calcDsp = var_calcDsp .. '.'; currentEntry = currentEntry .. '.'; noDecimal = false
+			end
+		elseif T == 'num' then
+			if currentOp == '=' then 
+				var_calcDsp = 0; var_calcForm = ''; currentEntry = ''; var_calcAns = ''
+			end
+
+			if currentEntry == '' or currentEntry == 0 then 
+				var_calcDsp = R; currentEntry = R
+			else 
+				var_calcDsp = var_calcDsp .. R; currentEntry = currentEntry .. R
+			end
+			currentOp = ''
+
+		elseif T == 'op' then
+			if R ~= currentOp then -- pressed same operator
+				if T ~= var_lastAction then --different operation
+					if currentEntry == '' then currentEntry = var_calcAns end
+					if currentEntry == '' then currentEntry = 0 end --var_calcAns is empty
+					if var_lastAction == 'eval' then
+						tmpForm = var_calcAns 
+					else
+						if var_lastAction == 'decimal' then currentEntry = string.sub(currentEntry,1,-2) end
+						tmpForm = var_calcForm..currentEntry
+						if var_calcAns == '' then var_calcAns = tmpForm else var_calcAns = var_calcAns .. lastOp .. currentEntry end
+					end
+					var_calcForm = tmpForm
+					var_calcAns = load('return '..var_calcAns)()
+					
+					if var_calcAns == math.huge then var_calcAns = 'Infinity' end
+					currentEntry = ''
+					var_calcDsp = var_calcAns
+					noDecimal = true
+				else
+					var_calcForm = tmpForm --change operator
+				end
+				
+				if var_calcAns ~= 'Infinity' then var_calcForm = var_calcForm .. R end
+				currentOp = R
+				lastOp = R
+			end
+		elseif T == 'eval' then --=
+			if currentEntry == '' then currentEntry = var_calcAns end
+
+			tmpForm = var_calcForm..currentEntry
+			if var_lastAction == 'eval' then 
+				var_calcForm = var_calcForm .. lastOp .. currentEntry 
+			elseif var_lastAction == 'decimal' then
+				var_calcForm = var_calcForm..string.sub(currentEntry,1,-2)
+				currentEntry = string.sub(currentEntry,1,-2)
+			else
+				var_calcForm = tmpForm 
+			end
+			if var_calcAns == '' then var_calcAns = tmpForm else var_calcAns = var_calcAns .. lastOp .. currentEntry end
+			var_calcAns = load('return '..var_calcAns)()
+			if var_calcAns == math.huge then 
+				var_calcAns = 'Infinity'
+			end
+			var_calcDsp = var_calcAns
+			noDecimal = true
+			currentOp = R
+		elseif T == 'delete' then
+			if currentOp ~= '=' then
+				currentEntry = string.sub(currentEntry,1,-2)
+				var_calcDsp = string.sub(var_calcDsp,1,-2)
+				if var_calcDsp == '' then var_calcDsp = 0 end
+			end
+		else
+			if R == 'ce' then
+				var_calcDsp = 0
+				currentEntry = ''
+				noDecimal = true
+			else
+				var_calcDsp = 0
+				var_calcForm = ''
+				currentEntry = ''
+				var_calcAns = ''
+				noDecimal = true
+			end	
+		end
+		var_lastAction = T
+	end
+end
+
+--------------------
+--    Settings    --
+--------------------
+function findTitle(page)
+	for i,v in ipairs(setTitle) do
+		if pageSettings >= startPage[v] then title = v end
+	end
+	return title
+end
+
+function settings(reason)
+		--page1: 'Main','Side Buttons'
+		--page2: 'Minutes','Seconds','Milliseconds'
+		--page3: 'Day','High','Current'
+			--page4: 'Low'
+		--page5: 'Numbers','Operators'
+
+
+	-- pageSettings == -1 Show calculator with hex
+	if reason == 'edit' then
+	
+	else
+		maxPages = pageCounter
+		if reason == 'prev' then
+			if pageSettings == 1 then
+				pageSettings = maxPages
+			elseif pageSettings < 0 then
+				pageSettings = lastPageSet
+			else
+				pageSettings = pageSettings - 1
+			end
+		elseif reason == 'next' then
+			if pageSettings == maxPages then
+				pageSettings = 1
+			else
+				pageSettings = pageSettings + 1
+			end
+		else 
+			pageSettings = startPage[reason]
+		end
+		var_title = findTitle(pageSettings)
+		for i=1,3 do
+		   var_page[i] = setPage[pageSettings][i]
+		   var_colour[i] = setColour[pageSettings][i]
+		end
+	end
+end
+lastPageSet = 1
+Reu = ''
+beN = 0
+function openSettings(set)
+	lastPageSet = pageSettings
+	Reu = findTitle(pageSettings)
+	beN = setPage[pageSettings][set]
+	
+	if Reu == 'countdown' then
+		calcScreen('count')
+		pageSettings = -2 --no operators
+	else
+		calcScreen('hex')
+		pageSettings = -1 --hex
+	end
+	wm_schedule{{action='tween', tween='opacitySet', from=100, to=-1, duration=1, easing=outCubic}}
+	--var_mode == var_Set and  or var_ms_opacity[var_Cal+var_arrayFix]
+
+	
+end
+
+function editSettings(set)
+	--open settings editor (calculator mode)
+		--value input goes to newValue
+	--Reu = findTitle(lastPageSet[0+var_arrayFix])
+	--beN = setPage[lastPageSet[0+var_arrayFix]][set]
+	
+	
+	--find out what was pushed and change
+	
+	if Reu == 'general' then
+		if beN == 'Main' then var_colour = newValue elseif beN == 'Side Buttons' then var_sideButton = newValue end
+	elseif Reu == 'countdown' then
+	
+	elseif Reu == 'weather' then
+		if beN == 'Day' then var_day = newValue elseif beN == 'High' then var_high = newValue elseif beN == 'Current' then var_current = newValue elseif beN == 'Low' then var_low = newValue end
+	elseif Reu == 'calculator' then
+		if beN == 'Numbers' then var_colourNum = newValue elseif beN == 'Operators' then var_colourOp = newValue end
+	end
+	
+end
